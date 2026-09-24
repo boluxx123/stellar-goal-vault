@@ -69,6 +69,9 @@ describe('eventIndexer observability', () => {
         isHealthy: false,
         consecutiveFailures: 0,
         lagMs: null,
+        freshness: 'never',
+        staleLagMs: expect.any(Number),
+        freshLagMs: expect.any(Number),
       }),
     );
   });
@@ -116,3 +119,23 @@ describe('eventIndexer observability', () => {
     stopEventIndexer();
   });
 });
+
+  it('classifies freshness: failing / never / fresh / idle / stale', async () => {
+    const { classifyIndexerFreshness } = await import('../eventIndexer');
+
+    expect(
+      classifyIndexerFreshness({ consecutiveFailures: 2, lagMs: 1000, running: true }),
+    ).toBe('failing');
+    expect(
+      classifyIndexerFreshness({ consecutiveFailures: 0, lagMs: null, running: false }),
+    ).toBe('never');
+    expect(
+      classifyIndexerFreshness({ consecutiveFailures: 0, lagMs: 1_000, running: true }),
+    ).toBe('fresh');
+    expect(
+      classifyIndexerFreshness({ consecutiveFailures: 0, lagMs: 60_000, running: true }),
+    ).toBe('idle');
+    expect(
+      classifyIndexerFreshness({ consecutiveFailures: 0, lagMs: 10 * 60_000, running: true }),
+    ).toBe('stale');
+  });
